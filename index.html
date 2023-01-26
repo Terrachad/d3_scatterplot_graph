@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.2/d3.min.js" integrity="sha512-oKI0pS1ut+mxQZdqnD3w9fqArLyILRsT3Dx0B+8RVEXzEk3aNK3J3pWlaGJ8MtTs1oiwyXDAH6hG6jy1sY0YqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <style>
+        .container{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            margin: 0;
+            vertical-align:middle;
+            justify-self: center;
+        }
+        .dot{
+            background-color: #dadada;
+            color: yellow;
+            border-radius: 50%;
+            display: inline-block;
+            border: 2px solid white;
+        }
+        .tooltip {
+        font-size: 13px;
+        position: absolute;
+        background: #d4edf4;
+        padding: 5px 10px;
+        opacity: 0;
+        color: #000;
+        z-index: 5;
+        border-radius: 5px;
+        transition: 100ms opacity;
+        font-family: "DM Sans", sans-serif;
+        }
+
+        
+
+    </style>
+</head>
+<body>
+    <div class="container"></div>
+    <script>
+        //declarations
+        let url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json';
+        
+        let heightScale;
+        let xScale;
+        let xAxisScale
+        let yScale;
+        let yAxisScale;
+
+        let width = 1000;
+        let height = 600;
+        let margin = 40;
+        let minTime;
+        let maxTime;
+        let size = 18;
+        let datesArray;
+        
+
+        d3.select('.container').append('svg')
+
+        var svg = d3.select('svg')
+
+        //svg.append('text').attr('id','title').text('USA GDP').attr('color','black').attr('x', 380).attr('y','200')
+        
+
+        const drawTheCanvas = () =>{
+            svg.attr('width', width).attr('height', height)
+        }
+
+        const toTime = (seconds) => {
+            var date = new Date(null);
+            date.setSeconds(-seconds);
+            return date.toISOString()
+        }
+
+        toTime(2500);
+
+        const setScale = (inputdata) =>{
+            
+            datesArray = inputdata.map((item) => {return item.Year})
+
+
+            heightScale = d3.scaleLinear()
+                            .domain([maxTime,minTime])
+                            .range([0, height - margin * 2])
+            
+            xScale = d3.scaleLinear()
+                       .domain([d3.min(datesArray) -1, d3.max(datesArray) + 1])
+                       .range([margin, width - margin])
+
+            
+            xAxisScale = d3.scaleTime()
+                        .domain([new Date(d3.min(datesArray)-1 , 0),new Date(d3.max(datesArray) + 1, 0) ])
+                        .range([margin, width - margin])
+
+            yAxisScale = d3.scaleLinear()
+                        .domain([maxTime, minTime])
+                        .range([height - margin, margin])
+            
+            
+        }
+
+        const getValues = (inputdata) =>{
+            minTime = d3.min(inputdata, (item) => {return item.Seconds})
+            maxTime = d3.max(inputdata, (item) => {return item.Seconds})
+        }
+
+        const makeLegend = () =>{
+            
+            svg.append('g')
+                .attr('class','legend')
+
+                d3.selectAll('.legend')
+                .append('g')
+                .attr('class','legend-label')
+                .attr('transform',`translate(${width-size*2},${height*0.4})`)
+                .append('rect')
+                .style('fill','rgb(255,127,14)')
+                .style('stroke','black')
+                .attr('width',18)
+                .attr('height',18)
+
+                d3.selectAll('.legend')
+                .append('g')
+                .attr('class','legend-label')
+                .attr('transform',`translate(${width-size*2},${height*0.45})`)
+                .append('rect')
+                .style('fill','rgb(76,146,195)')
+                .style('stroke','black')
+                .attr('width',18)
+                .attr('height',18)
+
+                d3.select('.legend-label:nth-child(1)')
+                .append('text')
+                .text('No doping allegations')
+                .attr('x', -size)
+                .attr('y','9')
+                .attr('dy','.35em')
+                .style('text-anchor','end')
+                .style('font-size','12')
+
+
+
+                d3.select('.legend-label:nth-child(2)')
+                .append('text')
+                .text('Riders with doping allegations')
+                .attr('x', -size)
+                .attr('y','9')
+                .attr('dy','.35em')
+                .style('text-anchor','end')
+                .style('font-size','12')
+        }
+
+        const drawTheDots = (inputdata) =>{
+
+            const tooltip = d3.select('#tooltip')
+
+            svg.selectAll('circle')
+            .data(inputdata)
+            .enter()
+            .append('circle')
+            .style('stroke','black')
+            .style('fill',(d,i) => {
+                if(inputdata[i].Doping != ""){
+                    return 'rgb(76,146,195)'
+                }
+                else{
+                    return 'rgb(255,127,14)'
+                }
+            })
+            .attr('class','dot')
+            .attr('data-xvalue', (d,i) => {return inputdata[i].Year } )
+            .attr('data-yvalue', (d,i) => {return toTime(inputdata[i].Year) } )
+            .attr('cx', (d,i) => {return xScale(inputdata[i].Year) } )
+            .attr('cy', (d,i) => {return (height - margin) - heightScale(inputdata[i].Seconds)})
+            .attr('r', 6)
+            .on('mouseover',(event,item,index) => {
+                    tooltip
+                    .html(item.Doping==""? `Name: ${item.Name}<br>Year: ${item.Year}, Time: ${item.Time}`: `Name: ${item.Name}<br>Year: ${item.Year}, Time: ${item.Time} <br><br> Doping: ${item.Doping} <br> <a href="${item.URL}">${item.URL}</a>` )
+                    .style('left',(event.pageX) + "px")
+                    .style('top',(event.pageY) + "px")
+                    .style('color','black')
+                    .transition()
+                    .style('opacity','1')
+                    .attr('data-year',item.Year)
+                    
+                })
+                .on('mouseout', (item)=>{
+                    tooltip
+                    .transition()
+                    .style('opacity','0')
+                })
+            console.log(inputdata)
+        }
+
+        const setAxis = () =>{
+            let xAxis = d3.axisBottom(xAxisScale)
+            svg.append("g").call(xAxis).attr('id','x-axis').attr('transform',`translate(0,${height - margin})`);
+        
+            let yAxis = d3.axisLeft(yAxisScale)
+            .tickFormat(function(d) {
+                return d3.timeFormat('%-M:%S')( new Date(0).setSeconds(d) )
+            });
+
+            svg.append('g').call(yAxis).attr('id','y-axis').attr('transform',`translate(${margin}, 0)`);
+            
+        }
+
+
+        function buildTheGraph(inputdata){
+            getValues(inputdata);
+            drawTheCanvas(inputdata);
+            makeLegend();
+            setScale(inputdata);
+            setAxis();
+            drawTheDots(inputdata);
+        }
+        
+
+        function fetchTheData(){
+            fetch(url)
+            .then((res) => res.json())
+            .then((res) => buildTheGraph(res))
+
+        }
+
+
+        addEventListener('DOMContentLoaded', (event) => {
+            fetchTheData();
+        });
+
+        
+    </script>
+    <h3 id="tooltip" class="tooltip" data-tooltip="Tool tip"></h3>
+</body>
+</html>
